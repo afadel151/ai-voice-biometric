@@ -12,4 +12,3 @@ def show_sr(input_file):
     print(f"Audio sample rate (get_samplerate): {sr2}")
     
 
-show_sr("akram.flac")
