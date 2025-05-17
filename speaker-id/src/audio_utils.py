@@ -1,6 +1,5 @@
 import librosa
 import numpy as np
-import soundfile as sf
 
 
 def rm_silence(input_file, sr, top_db=30):
