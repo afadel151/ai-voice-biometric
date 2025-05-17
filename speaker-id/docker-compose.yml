@@ -1,0 +1,17 @@
+service:
+  db:
+    image: mongo:5.0
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - speaker-id-network
+
+volumes:
+  mongo_data:
+    driver: local
+networks:
+  speaker-id-network:
+    driver: bridge

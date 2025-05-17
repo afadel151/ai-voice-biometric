@@ -1,0 +1,6 @@
+tensorflow==2.16.1
+librosa==0.11.0
+numpy==1.23.5
+scikit-learn==1.6.1
+pymongo==4.13.1
+soundfile==0.5.1
