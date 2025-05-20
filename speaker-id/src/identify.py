@@ -13,7 +13,7 @@ def identify_speaker(model, audio_path, max_len):
     
     best_score = -1
     best_speaker = "unknown"
-
+ 
     for entry in db_entries:
         db_embedding = np.array(entry['embedding'])
         sim = cosine_similarity(test_embedding, db_embedding)

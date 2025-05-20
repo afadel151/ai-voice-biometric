@@ -1,27 +1,6 @@
-from pymongo import MongoClient
-import numpy as np
 import sqlite3
 
-client = MongoClient('mongodb://localhost:27017/')
-db = client['speaker_db']
-collection = db['embeddings']
 
-### MONGODB database for embeddings in TDNN ###
-def insert_embedding(speaker, embedding):
-    collection.insert_one({'speaker': speaker, 'embedding': embedding.tolist()})
-
-def get_all_embeddings():
-    return list(collection.find({}))
-
-def get_embedding(speaker):
-    result = collection.find_one({'speaker': speaker})
-    if result:
-        return np.array(result['embedding'])    
-    return None
-
-
-
-####   SQLITE database for CNN model   ####
 def get_speaker(speaker_id):
     connection = sqlite3.connect('database.db')
     cursor = connection.cursor()
