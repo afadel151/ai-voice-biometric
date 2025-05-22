@@ -9,27 +9,40 @@ N_MFCC = 40
 SR = 16000 
 
 MEL_FILTERS = 128
-FRAME_LENGTH = 0.025
-FRAME_STEP = 0.01
+
 FFT_FILTERS = 2048
 
-def mfcc(signal, sample_rate=SR, frame_length=FRAME_LENGTH, frame_step=FRAME_STEP, num_mfcc=N_MFCC, num_mel_filters=MEL_FILTERS, target_frames=TARGET_FRAMES):
-    if not isinstance(signal, np.ndarray):
-        raise ValueError("Input signal must be a 1D numpy array.")
-    
-    S = power_to_db(mel_spectogram(signal, sr=sample_rate, n_fft=int(sample_rate * frame_length), hop_length=int(sample_rate * frame_step), n_mels=num_mel_filters))
-    M = dct(S, axis=-2, type=2, norm="ortho")[..., :num_mfcc, :]
-    
+def mfcc(signal, sample_rate=SR, num_mfcc=N_MFCC, num_mel_filters=MEL_FILTERS, target_frames=TARGET_FRAMES):
+    S = power_to_db(
+        mel_spectogram(signal, sample_r=sample_rate, n_fft=FFT_FILTERS, hop_length=512, n_mels=num_mel_filters)
+    )
+    M = dct(S, axis=-2, type=2, norm="ortho")[:num_mfcc, :]
     # Fixing the shape of M to (target_frames, num_mfcc)
-    if M.shape[0] > target_frames:
-        M = M[:target_frames, :]
-    elif M.shape[0] < target_frames:
-        pad_width = target_frames - mfcc.shape[0]
-        M = np.pad(mfcc, ((0, pad_width), (0, 0)), mode='constant')
+    current_frames = M.shape[1]
+    if current_frames > target_frames:
+        M = M[:, :target_frames]
+    elif current_frames < target_frames:
+        pad_width = target_frames - current_frames
+        M = np.pad(M, ((0, 0), (0, pad_width)), mode='constant')
     return M
    
    
-
+def spectogram(y, n_fft=2048, hop_length=512, win_length=None, center=True, window="hann", pad_mode="constant", power=1.0):
+     S = (
+            np.abs(
+                librosa.core.spectrum.stft(
+                    y,
+                    n_fft=n_fft,
+                    hop_length=hop_length,
+                    win_length=win_length,
+                    center=center,
+                    window=window,
+                    pad_mode=pad_mode,
+                )
+            )
+            ** power
+        )
+     return S,n_fft
  
 def compute_stft(y):
     if not isinstance(y, np.ndarray):
@@ -46,11 +59,14 @@ def power_spectogram(stft):
 
 
 def mel(sr: float,n_fft:int,n_mels = 128,fmin = 0.0,norm= "slaney"):
+    fmax = sr/2
     n_mels = int(n_mels)
     weights = np.zeros((n_mels, int(1 + n_fft // 2)), dtype=np.float32)
     fftfreqs = fft_frequencies(sr=sr, n_fft=n_fft)
-    mel_f = mel_frequencies(n_mels + 2, fmin=fmin)
+    mel_f = mel_frequencies(n_mels + 2, fmin=fmin,fmax=fmax)
+    
     fdiff = np.diff(mel_f)
+    
     ramps = np.subtract.outer(mel_f, fftfreqs)
     for i in range(n_mels):
         # lower and upper slopes for all bins
@@ -81,11 +97,11 @@ def fft_frequencies(*, sr = 22050, n_fft = 2048):
 
 
 def mel_frequencies(n_mels = 128, *, fmin = 0.0, fmax = 11025.0, htk = False):
-    min_mel = hz_to_mel(fmin, htk=htk)
-    max_mel = hz_to_mel(fmax, htk=htk)
+    min_mel = librosa.core.convert.hz_to_mel(fmin, htk=htk)
+    max_mel =  librosa.core.convert.hz_to_mel(fmax, htk=htk)
     mels = np.linspace(min_mel, max_mel, n_mels)
 
-    hz: np.ndarray = mel_to_hz(mels)
+    hz: np.ndarray =  librosa.core.convert.mel_to_hz(mels)
     return hz
 
 def hz_to_mel(frequencies, *, htk = False):
@@ -216,16 +232,11 @@ def tiny(x):
     return np.finfo(dtype).tiny
 
 
-def mel_spectogram(y, sr=16000, n_fft=2048, hop_length=512, n_mels=128, fmin=0.0, fmax=None):
-    if not isinstance(y, np.ndarray):
-        raise ValueError("Input signal must be a 1D numpy array.")
-    if fmax is None:
-        fmax = sr / 2
-    mel_basis = mel(sr=sr, n_fft=n_fft, n_mels=n_mels, fmin=fmin)
-    stft = compute_stft(y)
-    power_spectrogram = power_spectogram(stft)
-    mel_spectrogram = np.dot(mel_basis, power_spectrogram)
-    return mel_spectrogram
+def mel_spectogram(y, sample_r=16000, n_fft=2048, hop_length=512, n_mels=128, fmin=0.0, fmax=None):
+    S,n_fft = spectogram(y, n_fft, hop_length=hop_length)
+    mel_basis = mel(sample_r, n_fft, n_mels, fmin=fmin)
+    melspec: np.ndarray = np.einsum("...ft,mf->...mt", S, mel_basis, optimize=True)
+    return melspec
 
 def power_to_db(mel_spectrogram, ref=np.max):
     if not isinstance(mel_spectrogram, np.ndarray):

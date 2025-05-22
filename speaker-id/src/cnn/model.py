@@ -16,13 +16,20 @@ def create_model(num_classes,input_shape=INPUT_SHAPE):
         
         
         
-        layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
+        layers.Conv2D(128, (3,3), activation='relu', padding='same'),
         layers.BatchNormalization(),
-        layers.MaxPooling2D((2, 2)),
         
-         layers.Flatten(),
+        layers.Conv2D(128, (3,3), activation='relu', padding='same'),
+        layers.BatchNormalization(),
+        
+        layers.MaxPooling2D((2, 2)),
+        layers.Dropout(0.3),
+        
+        layers.GlobalAveragePooling2D(),
         layers.Dense(256, activation='relu'),
         layers.Dropout(0.5),
+        
+        
         layers.Dense(num_classes, activation='softmax')
     ])
     return model

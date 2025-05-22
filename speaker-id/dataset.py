@@ -1,9 +1,9 @@
 import os
-from src.mfcc import mfcc
 import sqlite3
+import librosa
 DATASET_DIR= "data"
 from src.audio_utils import load_and_preprocess
-
+import numpy as np
 def prepare_dataset(path=DATASET_DIR):
     X, y = [], []
     speakers = os.listdir(path)
@@ -16,8 +16,16 @@ def prepare_dataset(path=DATASET_DIR):
                 audio_path = os.path.join(audio_subdir, audio)
                 if audio.endswith('.flac'):
                     abs_path = os.path.abspath(audio_path)
+                    print(f"Processing file: {abs_path}")
                     y_audio, sr = load_and_preprocess(abs_path)
-                    mfcc_features = mfcc(signal=y_audio, sample_rate=sr)
+                    mfcc_features = librosa.feature.mfcc(signal=y_audio, sample_rate=sr)
+                    mfcc_features = librosa.feature.mfcc(y=y_audio, sr=sr, n_mfcc=40)
+                    if mfcc_features.shape[1] < 300:
+                        pad_width = 300 - mfcc_features.shape[1]
+                        mfcc_features = np.pad(mfcc_features, ((0, 0), (0, pad_width)), mode='constant')
+                    else:
+                        mfcc_features = mfcc_features[:, :300]
+                    mfcc_features = (mfcc_features - np.mean(mfcc_features)) / np.std(mfcc_features)
                     X.append(mfcc_features)
                     y.append(speaker_name)
     return X,y
