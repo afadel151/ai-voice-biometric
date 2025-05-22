@@ -11,6 +11,4 @@ def load_and_preprocess(audio_path, sr=16000, top_db=30):
     y_trimmed = rm_silence(audio_path, sr=sr, top_db=top_db)
     return y_trimmed, sr
 
-path = 'audio.flac'
 
-removed_silence, sr = load_and_preprocess(path)

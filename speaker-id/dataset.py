@@ -18,7 +18,6 @@ def prepare_dataset(path=DATASET_DIR):
                     abs_path = os.path.abspath(audio_path)
                     print(f"Processing file: {abs_path}")
                     y_audio, sr = load_and_preprocess(abs_path)
-                    mfcc_features = librosa.feature.mfcc(signal=y_audio, sample_rate=sr)
                     mfcc_features = librosa.feature.mfcc(y=y_audio, sr=sr, n_mfcc=40)
                     if mfcc_features.shape[1] < 300:
                         pad_width = 300 - mfcc_features.shape[1]

@@ -2,7 +2,7 @@ from keras.api import models,layers
 
 INPUT_SHAPE = (40, 300, 1) 
 NUM_CLASSES = 250
-def create_model(num_classes,input_shape=INPUT_SHAPE):
+def create_model(input_shape=INPUT_SHAPE,num_classes=NUM_CLASSES):
     model = models.Sequential([
         layers.Input(shape=input_shape),
         
