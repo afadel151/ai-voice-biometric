@@ -7,23 +7,23 @@ app = FastAPI()
 
 @app.post("/identify/")
 async def identify(file: UploadFile = File(...)):
-    with open("temp.wav", "wb") as f:
+    with open("temp.flac", "wb") as f:
         f.write(await file.read())
 
-    embedding = get_embedding("temp.wav")
-    speaker, similarity = identify_speaker(embedding)
+    Name = get_embedding("temp.flac")
+    # speaker, similarity = identify_speaker(embedding)
 
-    return {"speaker": speaker, "similarity": float(similarity)}
+    return {"speaker": Name, "similarity": float(similarity)}
 
 @app.post("/add/")
 async def add_speaker(
     file: UploadFile = File(...),
     speaker: str = Form(...)
 ):
-    with open("temp.wav", "wb") as f:
+    with open("temp.flac", "wb") as f:
         f.write(await file.read())
 
-    embedding = get_embedding("temp.wav")
+    embedding = get_embedding("temp.flac")
     insert_embedding(speaker, embedding)
 
     return {"message": f"Added speaker {speaker}"}
