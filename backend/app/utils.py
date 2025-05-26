@@ -7,6 +7,6 @@ def rm_silence(y, sr, top_db=30):
     non_silent = np.concatenate([y[start:end] for start, end in intervals])
     return non_silent
 
-def extract_mfcc(y, sr, n_mfcc=40):
+def extract_mfcc(y, sr, n_mfcc=20):
     mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_mfcc)
-    return mfcc.T  # Shape: (T, 40)
+    return mfcc

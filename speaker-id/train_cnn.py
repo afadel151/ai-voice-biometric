@@ -11,8 +11,7 @@ from collections import Counter
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 
-DATASET_DIR = "data"
-X,y = prepare_dataset(path=DATASET_DIR,n_mfccs=13, n_frames=100)
+X,y = prepare_dataset(n_mfccs=20, n_frames=200)
 
 X = np.array(X)[..., np.newaxis]
 

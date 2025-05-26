@@ -1,50 +1,48 @@
-from keras.api.preprocessing.sequence import pad_sequences
-from utils import extract_mfcc, rm_silence
-from config import MODEL_PATH, MAX_LEN, SAMPLE_RATE, N_MFCC
+import numpy as np
 import librosa
 import keras
-import numpy as np
-model = keras.models.load_model(MODEL_PATH)
-def get_embedding(audio_file):
-    y, sr = librosa.load(audio_file, sr=SAMPLE_RATE)
-    y = rm_silence(y, sr)
-    mfcc = extract_mfcc(y, sr, N_MFCC)
-    padded = pad_sequences([mfcc], maxlen=MAX_LEN, padding='post', dtype='float32')
-    return model.predict(padded)[0]
-# im predicting with CNN model , i want to return unknown if the model is not confident enough, otherwie it returns the speaker's name which is the result of the prediction
-
-
+from keras.api.preprocessing.sequence import pad_sequences
 from sklearn.preprocessing import LabelEncoder
 import json
+from utils import extract_mfcc, rm_silence
+from config import MODEL_PATH, MAX_LEN, SAMPLE_RATE, N_MFCC
 
-# Suppose your Y is a list of speaker names
+# Load model and label encoder
+model = keras.models.load_model(MODEL_PATH)
 
-
-
-# Save the encoder
 with open("label_encoder.json", "r") as f:
     classes = json.load(f)
-    
-    
+
 le = LabelEncoder()
 le.classes_ = np.array(classes)
+
+CONFIDENCE_THRESHOLD = 0.8  # Adjust as needed
+
 def predict_speaker(audio_file):
     y, sr = librosa.load(audio_file, sr=SAMPLE_RATE)
     y = rm_silence(y, sr)
-    mfcc = extract_mfcc(y, sr, N_MFCC)
-    padded = pad_sequences([mfcc], maxlen=MAX_LEN, padding='post', dtype='float32')
-    predictions = model.predict(padded)
-    return predictions[0]
+    mfcc = extract_mfcc(y, sr, 20)
+
+    # Ensure shape is (20, 200)
+    if mfcc.shape[1] < 200:
+        mfcc = np.pad(mfcc, ((0, 0), (0, 200 - mfcc.shape[1])), mode='constant')
+    else:
+        mfcc = mfcc[:, :200]
+
+    # Final shape: (1, 20, 200, 1)
+    input_data = np.expand_dims(np.expand_dims(mfcc, axis=0), axis=-1)
+
+    preds = model.predict(input_data, verbose=0)[0]
+    max_conf = np.max(preds)
+    pred_index = np.argmax(preds)
+
+    if max_conf < CONFIDENCE_THRESHOLD:
+        return "Unknown", max_conf
+    else:
+        speaker = le.inverse_transform([pred_index])[0]
+        return speaker, max_conf
 
 if __name__ == "__main__":
-    audio_file = "58.flac"
-    predictions = predict_speaker(audio_file)
-    print(predictions)
-    max_confidence = max(predictions)
-
-    if max_confidence < 0.8:
-        print("unknown")
-    else:
-        predicted_index = predictions.argmax()
-        speaker_name = le.inverse_transform([predicted_index])[0]
-        print(speaker_name)
+    file = "1.flac"
+    speaker, confidence = predict_speaker(file)
+    print(f"Predicted: {speaker} (Confidence: {confidence:.2f})")

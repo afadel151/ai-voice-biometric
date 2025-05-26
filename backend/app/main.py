@@ -13,7 +13,7 @@ async def identify(file: UploadFile = File(...)):
     Name = get_embedding("temp.flac")
     # speaker, similarity = identify_speaker(embedding)
 
-    return {"speaker": Name, "similarity": float(similarity)}
+    return {"speaker": Name}
 
 @app.post("/add/")
 async def add_speaker(
