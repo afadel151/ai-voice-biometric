@@ -16,7 +16,7 @@ def main():
     input("Press Enter to start recording session...")
     count = 1
     while True:
-        filename = os.path.join(folder, f"{count}.flac")
+        filename = os.path.join(folder, f"{count}.wav")
         record_audio(filename)
 
         user_input = input("Type 'm' for more or 'f' to finish: ").strip().lower()

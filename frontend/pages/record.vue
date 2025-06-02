@@ -50,11 +50,7 @@
         </div>
 
         <!-- Status indicator -->
-        <div
-          class="inline-flex items-center gap-2 backdrop-blur-sm bg-white/10 px-6 py-3 rounded-full border border-white/20">
-          <div class="w-3 h-3 rounded-full" :class="statusIndicatorClass"></div>
-          <span class="text-white/80 font-medium">{{ statusText }}</span>
-        </div>
+        <AllSpeakers />
       </div>
 
       <!-- Main Recording Interface -->
@@ -75,7 +71,7 @@
                 <div class="flex items-center gap-2">
                   <button @click="toggleVisualizationMode"
                     class="p-2 backdrop-blur-sm bg-white/10 hover:bg-white/20 rounded-lg border border-white/20 transition-all duration-300">
-                    <BarChart3 v-if="visualizationMode === 'wavesform'" class="h-4 w-4 text-white/80" />
+                    <BarChart3 v-if="visualizationMode === 'waveform'" class="h-4 w-4 text-white/80" />
                     <Waves v-else class="h-4 w-4 text-white/80" />
                   </button>
                 </div>
@@ -104,7 +100,7 @@
                 <div v-else-if="isRecording" class="w-full h-full flex items-center justify-center p-8">
                   <div class="flex items-end gap-1 w-full h-full max-w-5xl">
                     <div v-for="(level, i) in liveAudioLevels" :key="i"
-                      class="bg-gradient-to-t from-purple-500  to-cyan-300 rounded-full transition-all duration-100 ease-out shadow-lg"
+                      class="bg-gradient-to-t from-purple-500 to-cyan-300 rounded-full transition-all duration-100 ease-out shadow-lg"
                       :class="visualizationMode === 'bars' ? 'w-3' : 'w-1'" :style="`
                         height: ${level}%; 
                         box-shadow: 0 0 ${level / 5}px rgba(168, 85, 247, 0.6);
@@ -204,7 +200,7 @@
                     <Pause v-else class="h-5 w-5" />
                     {{ isPlaying ? 'Playing' : 'Play Audio' }}
                   </button>
-
+                  <AddSpeaker :audioBlob="audioBlob" :audioDuration="duration" />
                   <button @click="identifySpeaker" :disabled="isIdentifying"
                     class="w-full px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/30 flex items-center justify-center gap-3 font-medium">
                     <Loader2 v-if="isIdentifying" class="h-5 w-5 animate-spin" />
@@ -282,123 +278,64 @@
         </div>
       </div>
 
-      <!-- Enhanced Audio Controls -->
-      
-
-      <!-- Enhanced Results Section -->
-      <div v-if="identificationResult" class="relative group" data-aos="fade-up" data-aos-delay="800">
-        <div
-          class="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000">
-        </div>
-
-        <div class="relative backdrop-blur-xl bg-white/10 p-8 lg:p-12 rounded-3xl border border-white/20">
-          <div class="flex items-center justify-between mb-8">
-            <div class="flex items-center gap-4">
-              <div
-                class="w-16 h-16 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10">
-                <User class="h-8 w-8 text-emerald-400" />
-              </div>
-              <div>
-                <h3 class="text-3xl font-bold text-white">Identification Results</h3>
-                <p class="text-white/60">AI analysis completed</p>
-              </div>
-            </div>
-            <div class="text-right">
-              <div class="text-sm text-white/60">Confidence Score</div>
-              <div class="text-2xl font-bold text-emerald-400">{{ identificationResult.confidence }}%</div>
-            </div>
-          </div>
-
-          <!-- Primary Result -->
-          <div class="mb-8">
-            <div class="relative group/card">
-              <div
-                class="absolute -inset-0.5 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl blur opacity-30 group-hover/card:opacity-50 transition duration-500">
-              </div>
-              <div
-                class="relative backdrop-blur-sm bg-white/10 p-8 rounded-2xl border border-white/20 hover:border-white/30 transition-all duration-300">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-6">
-                    <div
-                      class="w-20 h-20 bg-gradient-to-br from-emerald-500/30 to-teal-500/30 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/20">
-                      <User class="h-10 w-10 text-emerald-400" />
-                    </div>
-                    <div>
-                      <div class="text-2xl font-bold text-white mb-2">{{ identificationResult.name }}</div>
-                      <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                        <span class="text-emerald-400 font-medium">Primary Match</span>
-                      </div>
-                      <div class="text-white/60 text-sm mt-1">Voice pattern recognized with high confidence</div>
-                    </div>
-                  </div>
-                  <div class="text-right">
-                    <div class="text-4xl font-bold text-emerald-400 mb-1">{{ identificationResult.confidence }}%</div>
-                    <div class="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
-                      <div
-                        class="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-1000"
-                        :style="`width: ${identificationResult.confidence}%`"></div>
-                    </div>
-                  </div>
+      <!-- Identification Results Dialog -->
+      <Dialog v-model:open="isDialogOpen">
+        <DialogTrigger as-child>
+          <!-- Invisible trigger, controlled programmatically -->
+        </DialogTrigger>
+        <DialogContent class="sm:max-w-[425px] backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle class="text-2xl font-bold text-white flex items-center gap-2">
+              <User class="h-6 w-6 text-emerald-400" />
+              Identification Results
+            </DialogTitle>
+            <DialogDescription class="text-white/60">
+              Results of the speaker identification analysis
+            </DialogDescription>
+          </DialogHeader>
+          <div v-if="identificationResult" class="space-y-6 mt-4">
+            <!-- Primary Match -->
+            <div class="p-4 bg-gradient-to-r from-emerald-600/20 to-teal-600/20 rounded-xl border border-emerald-500/30">
+              <h4 class="text-lg font-semibold text-white">Best Match</h4>
+              <div class="mt-2 space-y-2">
+                <div class="flex justify-between items-center">
+                  <span class="text-white/80">Speaker:</span>
+                  <span class="text-white font-medium">{{ identificationResult.speaker === 'unknown stylizeds0t0eunknown' ? 'Unknown' : identificationResult.speaker }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-white/80">Confidence:</span>
+                  <span class="text-emerald-400 font-medium">{{ identificationResult.confidence ? identificationResult.confidence.toFixed(2) + '%' : '0' }}</span>
+                </div>
+                <div v-if="identificationResult.message" class="text-sm text-white/60">
+                  {{ identificationResult.message }}
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- Alternative Matches -->
-          <div class="space-y-4">
-            <h4 class="text-lg font-semibold text-white/80 mb-4">Alternative Matches</h4>
-            <div v-for="(speaker, index) in identificationResult.otherSpeakers" :key="index"
-              class="relative group/card">
-              <div
-                class="absolute -inset-0.5 bg-gradient-to-r from-white/5 to-white/10 rounded-2xl blur opacity-0 group-hover/card:opacity-30 transition duration-500">
-              </div>
-              <div
-                class="relative backdrop-blur-sm bg-white/5 p-6 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-4">
-                    <div
-                      class="w-16 h-16 bg-gradient-to-br from-white/10 to-white/5 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10">
-                      <User class="h-8 w-8 text-white/60" />
-                    </div>
-                    <div>
-                      <div class="text-xl font-bold text-white mb-1">{{ speaker.name }}</div>
-                      <div class="text-white/60 font-medium">Possible Match</div>
-                    </div>
-                  </div>
-                  <div class="text-right">
-                    <div class="text-2xl font-bold text-white/80 mb-1">{{ speaker.confidence }}%</div>
-                    <div class="w-20 h-2 bg-white/20 rounded-full overflow-hidden">
-                      <div
-                        class="h-full bg-gradient-to-r from-white/60 to-white/40 rounded-full transition-all duration-1000"
-                        :style="`width: ${speaker.confidence}%`"></div>
-                    </div>
-                  </div>
+            <!-- Other Matches -->
+            <div v-if="identificationResult.otherSpeakers && identificationResult.otherSpeakers.length" class="space-y-2">
+              <h4 class="text-lg font-semibold text-white">Other Possible Matches</h4>
+              <div v-for="(speaker, index) in identificationResult.otherSpeakers" :key="index"
+                class="p-3 bg-white/5 rounded-lg border border-white/10">
+                <div class="flex justify-between items-center">
+                  <span class="text-white/80">{{ speaker.name }}</span>
+                  <span class="text-white/60">{{ speaker.confidence }}%</span>
                 </div>
               </div>
             </div>
+            <!-- Error Message -->
+            <div v-if="identificationResult.error" class="p-4 bg-red-500/20 rounded-xl border border-red-500/30">
+              <h4 class="text-lg font-semibold text-white">Error</h4>
+              <p class="text-white/80 mt-2">{{ identificationResult.error }}</p>
+            </div>
           </div>
-
-          <!-- Action Buttons -->
-          <div class="flex flex-wrap gap-4 mt-8 pt-8 border-t border-white/20">
-            <button
-              class="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl transition-all duration-300 hover:scale-105 flex items-center gap-2">
-              <Download class="h-5 w-5" />
-              Export Results
-            </button>
-            <button
-              class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl transition-all duration-300 hover:scale-105 flex items-center gap-2">
-              <Share2 class="h-5 w-5" />
-              Share Analysis
-            </button>
-            <button
-              class="px-6 py-3 backdrop-blur-sm bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 rounded-xl transition-all duration-300 hover:scale-105 flex items-center gap-2">
-              <RotateCcw class="h-5 w-5" />
-              Analyze Again
-            </button>
-          </div>
-        </div>
-      </div>
+          <DialogFooter>
+            <Button type="button" variant="secondary" @click="isDialogOpen = false"
+              class="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   </div>
 </template>
@@ -407,10 +344,11 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import {
   Mic, Play, Pause, Square, User, RefreshCw, Loader2, Settings, Info, Zap,
-  Download, Share2, Volume2, VolumeX, Waves, BarChart3, RotateCcw
+  Download, Share2, Volume2, Waves, BarChart3
 } from 'lucide-vue-next'
 import AOS from 'aos'
 import 'aos/dist/aos.css'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 // Audio recording state
 const isRecording = ref(false)
@@ -433,7 +371,12 @@ const isPlaying = ref(false)
 const currentTime = ref(0)
 const duration = ref(0)
 const volume = ref(80)
-const isMuted = ref(false)
+
+// Dialog state
+const isDialogOpen = ref(false)
+
+// Identification results
+const identificationResult = ref(null)
 
 // Computed properties
 const playbackProgress = computed(() => {
@@ -455,9 +398,6 @@ const statusText = computed(() => {
   return 'Ready to record'
 })
 
-// Identification results
-const identificationResult = ref(null)
-
 // Recording timer
 let recordingInterval = null
 
@@ -471,9 +411,9 @@ const startRecording = async () => {
         autoGainControl: true
       }
     })
-
+    const mimeType = 'audio/mp4' // Use mp4 as per backend support
     mediaRecorder.value = new MediaRecorder(stream, {
-      mimeType: 'audio/webm;codecs=opus'
+      mimeType: mimeType
     })
     audioChunks.value = []
 
@@ -490,7 +430,7 @@ const startRecording = async () => {
     }
 
     mediaRecorder.value.onstop = () => {
-      const blob = new Blob(audioChunks.value, { type: 'audio/wav' })
+      const blob = new Blob(audioChunks.value, { type: 'audio/mp4' })
       audioBlob.value = blob
       audioURL.value = URL.createObjectURL(blob)
 
@@ -588,6 +528,7 @@ const resetRecording = () => {
   duration.value = 0
   identificationResult.value = null
   recordingTime.value = 0
+  isDialogOpen.value = false
 
   // Clear canvas
   if (visualizer.value) {
@@ -617,19 +558,6 @@ const updatePlaybackProgress = () => {
   currentTime.value = audioElement.value.currentTime
 }
 
-// Seek audio
-const seekAudio = (event) => {
-  if (!audioElement.value || !duration.value) return
-
-  const rect = event.target.getBoundingClientRect()
-  const clickX = event.clientX - rect.left
-  const percentage = clickX / rect.width
-  const newTime = percentage * duration.value
-
-  audioElement.value.currentTime = newTime
-  currentTime.value = newTime
-}
-
 // Handle canvas click for seeking
 const handleCanvasClick = (event) => {
   if (!audioElement.value || !duration.value) return
@@ -641,14 +569,6 @@ const handleCanvasClick = (event) => {
 
   audioElement.value.currentTime = newTime
   currentTime.value = newTime
-}
-
-// Toggle mute
-const toggleMute = () => {
-  if (!audioElement.value) return
-
-  isMuted.value = !isMuted.value
-  audioElement.value.muted = isMuted.value
 }
 
 // Toggle visualization mode
@@ -687,7 +607,7 @@ const downloadAudio = () => {
   const url = URL.createObjectURL(audioBlob.value)
   const a = document.createElement('a')
   a.href = url
-  a.download = `recording-${new Date().toISOString().slice(0, 19)}.wav`
+  a.download = `recording-${new Date().toISOString().slice(0, 19)}.mp4`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
@@ -700,7 +620,7 @@ const shareAudio = async () => {
 
   if (navigator.share) {
     try {
-      const file = new File([audioBlob.value], 'recording.wav', { type: 'audio/wav' })
+      const file = new File([audioBlob.value], 'recording.mp4', { type: 'audio/mp4' })
       await navigator.share({
         title: 'Voice Recording',
         text: 'Check out this voice recording',
@@ -759,15 +679,13 @@ const setupAudioVisualization = () => {
     bgGradient.addColorStop(0, 'rgba(0, 0, 0, 0.4)')
     bgGradient.addColorStop(1, 'rgba(30, 30, 60, 0.2)')
 
-
     ctx.fillStyle = bgGradient
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
     const barWidth = (canvas.width / bufferLength) * 2.5
     let x = 0
-   
+
     for (let i = 0; i < bufferLength; i++) {
-      
       const barHeight = (dataArray[i] / 255) * canvas.height * 0.9
 
       // Create dynamic bar gradient
@@ -785,7 +703,6 @@ const setupAudioVisualization = () => {
         barGradient.addColorStop(1, '#6366f1') // indigo
       }
 
-
       ctx.fillStyle = barGradient
       ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight)
 
@@ -797,10 +714,9 @@ const setupAudioVisualization = () => {
         ctx.shadowBlur = 0
       }
 
-
       x += barWidth + 1
     }
-    
+
     // Draw progress line
     const progressX = (currentTime.value / duration.value) * canvas.width
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'
@@ -830,39 +746,45 @@ const setupAudioVisualization = () => {
 // Enhanced speaker identification
 const identifySpeaker = async () => {
   isIdentifying.value = true
+  isDialogOpen.value = false
 
   if (!audioBlob.value) {
-    console.error("No audio to send");
-    return;
+    console.error("No audio to send")
+    identificationResult.value = { error: "No audio available for identification" }
+    isDialogOpen.value = true
+    isIdentifying.value = false
+    return
   }
 
   const formData = new FormData()
-  formData.append('file', audioBlob.value, 'recording.wav')
+  formData.append('file', audioBlob.value, 'recording.mp4')
 
-  // try {
-  //   const response = await fetch('http://127.0.0.1:8000/identify/', {
-  //     method: 'POST',
-  //     body: formData,
-  //   })
+  try {
+    const response = await fetch('http://127.0.0.1:8000/identify', {
+      method: 'POST',
+      body: formData,
+    })
 
-  //   if (!response.ok) throw new Error('Upload failed')
-  //   const result = await response.json()
-  //   console.log('Backend response:', result)
-  // } catch (err) {
-  //   console.error('Failed to send audio:', err)
-  // }
+    const result = await response.json()
+    
+    console.log('Backend response:', result)
 
-  identificationResult.value = {
-    name: 'Akram Fadel',
-    confidence: 92,
-    otherSpeakers: [
-      { name: 'Sarah Johnson', confidence: 22 },
-      { name: 'Michael Chen', confidence: 15 },
-      { name: 'Emma Wilson', confidence: 6 },
-      { name: 'David Brown', confidence: 5 }
-    ]
+    if (!response.ok) {
+      identificationResult.value = { error: result.error || 'Identification failed' }
+    } else {
+      identificationResult.value = {
+        speaker: result.speaker,
+        confidence: result.confidence,
+        message: result.message,
+        otherSpeakers: result.otherSpeakers || []
+      }
+    }
+  } catch (err) {
+    console.error('Failed to send audio:', err)
+    identificationResult.value = { error: `Processing error: ${err.message}` }
   }
 
+  isDialogOpen.value = true
   isIdentifying.value = false
 }
 
