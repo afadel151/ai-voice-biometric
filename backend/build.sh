@@ -13,7 +13,7 @@ curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.ta
 # Extract and move ffmpeg binary to /usr/local/bin
 tar -xf ffmpeg.tar.xz --strip-components=1
 chmod +x ffmpeg
-sudo mv ffmpeg /usr/local/bin/ffmpeg
-sudo mv ffprobe /usr/local/bin/ffprobe
+mv ffmpeg /usr/local/bin/ffmpeg
+mv ffprobe /usr/local/bin/ffprobe
 
 echo "FFmpeg installed successfully."
