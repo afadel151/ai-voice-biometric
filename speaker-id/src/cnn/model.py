@@ -14,7 +14,6 @@ def create_model(input_shape=INPUT_SHAPE, num_classes=NUM_CLASSES):
         BatchNormalization(),
         MaxPooling2D((2, 2)),
         Dropout(0.3),
-        # dropout technique de régularisation qui permet de prévenir le surapprentissage en supprimant aléatoirement des neurones pendant l'entraînement
 
         Conv2D(128, (3, 3), activation='relu',padding='same'),
         BatchNormalization(),

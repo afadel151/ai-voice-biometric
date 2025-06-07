@@ -19,16 +19,14 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change to your frontend origin in production
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Database file path
 SPEAKERS_DB_FILE = "speakers_db.json"
 
-# Load pretrained ECAPA-TDNN model from SpeechBrain
 os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
 
 def load_model_safe():
@@ -75,7 +73,6 @@ def save_speakers_db(speaker_embeddings: Dict[str, np.ndarray]) -> None:
     except Exception as e:
         print(f"Error saving speakers database: {e}")
 
-# Load existing speaker embeddings
 speaker_embeddings = load_speakers_db()
 
 @app.get("/")
@@ -92,60 +89,45 @@ async def get_speakers():
 async def add_speaker(speaker_name: str= Form(...), file: UploadFile = File(...)):
     """Add a new speaker to the database by converting MP4 to WAV"""
     try:
-        # Validate input
         if not speaker_name or not speaker_name.strip():
             raise HTTPException(status_code=400, detail="Speaker name cannot be empty")
         
         speaker_name = speaker_name.strip()
         
-        # Validate file format
         if not file.filename.lower().endswith((".mp4", ".m4a")):
             raise HTTPException(status_code=400, detail="Only .mp4 or .m4a files are supported")
 
-        # Validate file size
         file_content = await file.read()
         if len(file_content) > 10 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
 
-        # Convert MP4 to WAV
         print(f"Converting {file.filename} to WAV...")
         audio = AudioSegment.from_file(io.BytesIO(file_content), format="mp4")
         
-        # Validate duration
         duration_ms = len(audio)
         if duration_ms < 3000:
             raise HTTPException(status_code=400, detail="Audio duration must be at least 3 seconds")
         
-        # Convert to mono and set sample rate
         audio = audio.set_channels(1).set_frame_rate(16000)
         
-        # Export to WAV
         wav_buffer = io.BytesIO()
         audio.export(wav_buffer, format="wav")
         wav_buffer.seek(0)
         
-        # Read WAV data
         audio_data, sample_rate = sf.read(wav_buffer)
-        
-        # Verify sample rate
         if sample_rate != 16000:
             raise HTTPException(status_code=400, detail=f"Converted audio must be 16kHz, got {sample_rate}Hz")
 
-        # Ensure audio is mono
         if len(audio_data.shape) > 1:
             audio_data = np.mean(audio_data, axis=1)
-
-        # Convert to tensor
         audio_tensor = torch.tensor(audio_data).float()
         if len(audio_tensor.shape) == 1:
             audio_tensor = audio_tensor.unsqueeze(0)
 
-        # Extract embedding (assuming `model` is defined)
         with torch.no_grad():
             embedding = model.encode_batch(audio_tensor)
             embedding_vector = embedding.squeeze().numpy()
 
-        # Store embedding (assuming `speaker_embeddings` and `save_speakers_db` are defined)
         speaker_embeddings[speaker_name] = embedding_vector
         save_speakers_db(speaker_embeddings)
         

@@ -20,7 +20,6 @@ os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
 def load_model_safe():
     """Safely load the SpeechBrain model with error handling"""
     try:
-        # Try with copy strategy first
         from speechbrain.utils.fetching import LocalStrategy
         model = SpeakerRecognition.from_hparams(
             source="speechbrain/spkrec-ecapa-voxceleb",
@@ -53,7 +52,6 @@ def load_speakers_db() -> Dict[str, Any]:
 def save_speakers_db(speaker_embeddings: Dict[str, np.ndarray]) -> None:
     """Save speaker embeddings to JSON file"""
     try:
-        # Convert numpy arrays to lists for JSON serialization
         serializable_data = {}
         for speaker_name, embedding in speaker_embeddings.items():
             serializable_data[speaker_name] = embedding.tolist()
@@ -71,44 +69,31 @@ def add_speaker(speaker_name: str, file_path: str):
     
     speaker_name = speaker_name.strip()
     
-    # Validate file path exists
     if not os.path.exists(file_path):
         return JSONResponse(content={"error": f"File not found: {file_path}"}, status_code=400)
     
-    # Validate file format
     if not file_path.lower().endswith(".wav"):
         return JSONResponse(content={"error": "Only .wav files are supported"}, status_code=400)
 
     try:
-        # Read audio file directly from path
         audio_data, sample_rate = sf.read(file_path)
         
-        # Check sample rate
         if sample_rate != 16000:
             return JSONResponse(
                 content={"error": f"Audio must be 16kHz, got {sample_rate}Hz"}, 
                 status_code=400
             )
 
-        # Ensure audio is mono
         if len(audio_data.shape) > 1:
             audio_data = np.mean(audio_data, axis=1)
 
-        # Convert to tensor
         audio_tensor = torch.tensor(audio_data).float()
         if len(audio_tensor.shape) == 1:
             audio_tensor = audio_tensor.unsqueeze(0)
-
-        # Extract embedding
         with torch.no_grad():
             embedding = model.encode_batch(audio_tensor)
-            # Get the embedding vector
             embedding_vector = embedding.squeeze().numpy()
-
-        # Store embedding
         speaker_embeddings[speaker_name] = embedding_vector
-        
-        # Save to file
         save_speakers_db(speaker_embeddings)
         
         return JSONResponse(
@@ -129,7 +114,6 @@ def identify(file: UploadFile = File(...)):
         return JSONResponse(content={"error": "Only .wav files are supported"}, status_code=400)
 
     try:
-        # Check if we have any registered speakers
         if not speaker_embeddings:
             return JSONResponse(
                 content={
@@ -139,38 +123,30 @@ def identify(file: UploadFile = File(...)):
                 status_code=404
             )
 
-        # Read audio file
         audio_data, sample_rate = sf.read(file.file)
         
-        # Check sample rate
         if sample_rate != 16000:
             return JSONResponse(
                 content={"error": f"Audio must be 16kHz, got {sample_rate}Hz"}, 
                 status_code=400
             )
 
-        # Ensure audio is mono
         if len(audio_data.shape) > 1:
             audio_data = np.mean(audio_data, axis=1)
 
-        # Convert to tensor
         audio_tensor = torch.tensor(audio_data).float()
         if len(audio_tensor.shape) == 1:
             audio_tensor = audio_tensor.unsqueeze(0)
 
-        # Extract embedding
         with torch.no_grad():
             input_embedding = model.encode_batch(audio_tensor)
             input_embedding_vector = input_embedding.squeeze().numpy()
-
-        # Find best match
         best_speaker = "unknown"
         best_score = -1.0
-        similarity_threshold = 0.6  # Adjust this threshold as needed
+        similarity_threshold = 0.6  
 
         for speaker_name, stored_embedding in speaker_embeddings.items():
             try:
-                # Calculate cosine similarity (1 - cosine distance)
                 similarity = 1 - cosine(input_embedding_vector, stored_embedding)
                 
                 if similarity > best_score:
@@ -181,7 +157,6 @@ def identify(file: UploadFile = File(...)):
                 print(f"Error calculating similarity for {speaker_name}: {e}")
                 continue
 
-        # Check if similarity meets threshold
         if best_score < similarity_threshold:
             return JSONResponse(
                 content={
